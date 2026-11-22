@@ -51,59 +51,50 @@
 }
 
 @layer components {
-  /* Signature Haute-Parfumerie Liquid Glass (never forces position: relative over Tailwind utilities) */
+  /* Lightweight GPU-friendly Haute-Parfumerie Liquid Glass */
   .liquid-glass {
     background: linear-gradient(
       145deg,
-      rgba(22, 34, 66, 0.72) 0%,
-      rgba(10, 17, 36, 0.84) 55%,
-      rgba(6, 11, 23, 0.92) 100%
+      rgba(22, 34, 66, 0.88) 0%,
+      rgba(10, 17, 36, 0.94) 55%,
+      rgba(6, 11, 23, 0.96) 100%
     );
-    backdrop-filter: blur(26px) saturate(165%);
-    -webkit-backdrop-filter: blur(26px) saturate(165%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(212, 175, 110, 0.22);
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
       inset 0 -1px 0 0 rgba(212, 175, 110, 0.08),
-      0 24px 60px -24px rgba(0, 0, 0, 0.85),
-      0 0 40px -18px rgba(212, 175, 110, 0.14);
+      0 20px 50px -24px rgba(0, 0, 0, 0.85);
   }
 
   .liquid-glass-subtle {
     background: linear-gradient(
       135deg,
-      rgba(16, 26, 51, 0.62) 0%,
-      rgba(8, 14, 29, 0.76) 100%
+      rgba(16, 26, 51, 0.84) 0%,
+      rgba(8, 14, 29, 0.9) 100%
     );
-    backdrop-filter: blur(18px) saturate(150%);
-    -webkit-backdrop-filter: blur(18px) saturate(150%);
     border: 1px solid rgba(212, 175, 110, 0.18);
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.09),
-      0 14px 36px -18px rgba(0, 0, 0, 0.7);
+      0 10px 28px -16px rgba(0, 0, 0, 0.7);
   }
 
   .liquid-glass-card {
     background: linear-gradient(
       155deg,
-      rgba(19, 30, 58, 0.68) 0%,
-      rgba(9, 15, 31, 0.88) 100%
+      rgba(19, 30, 58, 0.82) 0%,
+      rgba(9, 15, 31, 0.94) 100%
     );
-    backdrop-filter: blur(18px) saturate(145%);
-    -webkit-backdrop-filter: blur(18px) saturate(145%);
     border: 1px solid rgba(212, 175, 110, 0.16);
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
-      0 20px 45px -24px rgba(0, 0, 0, 0.8);
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+      0 16px 36px -20px rgba(0, 0, 0, 0.8);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease;
   }
 
   .liquid-glass-card:hover {
     border-color: rgba(212, 175, 110, 0.42);
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
-      0 28px 60px -22px rgba(0, 0, 0, 0.9),
-      0 0 36px -12px rgba(212, 175, 110, 0.2);
   }
 
   /* Specular champagne gold CTA with subtle light sheen */
@@ -114,33 +105,14 @@
     color: #060B17;
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.45),
-      0 12px 30px -10px rgba(212, 175, 110, 0.45);
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, filter 0.25s ease;
-  }
-
-  .btn-gold-luxury::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      110deg,
-      transparent 20%,
-      rgba(255, 255, 255, 0.38) 50%,
-      transparent 80%
-    );
-    transform: translateX(-120%);
-    transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
-    pointer-events: none;
-  }
-
-  .btn-gold-luxury:hover::after {
-    transform: translateX(120%);
+      0 10px 24px -10px rgba(212, 175, 110, 0.45);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease;
   }
 
   .btn-gold-luxury:hover {
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.55),
-      0 16px 36px -10px rgba(212, 175, 110, 0.6);
+      0 14px 30px -10px rgba(212, 175, 110, 0.6);
   }
 
   .gold-ornament-divider {
@@ -156,6 +128,21 @@
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(212, 175, 110, 0.32), transparent);
   }
+}
+
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-hero-in {
+  animation: heroFadeUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .gold-hairline {

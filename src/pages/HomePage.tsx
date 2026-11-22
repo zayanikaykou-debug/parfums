@@ -1,5 +1,4 @@
 import { ArrowRight, Mail, MessageCircle, Phone } from 'lucide-react';
-import { motion } from 'motion/react';
 import { LuxuryImage } from '../components/LuxuryImage';
 import { ProductCard } from '../components/ProductCard';
 import { useStore } from '../context/StoreContext';
@@ -29,6 +28,7 @@ export function HomePage() {
           <LuxuryImage
             src={settings.hero_image}
             alt={settings.hero_title}
+            priority
             className="w-full h-full object-cover object-center scale-[1.02]"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#060B17]/95 via-[#060B17]/68 to-[#060B17]/20" />
@@ -37,12 +37,7 @@ export function HomePage() {
         </div>
 
         <div className="relative z-10 max-w-[1280px] mx-auto w-full px-5 sm:px-8 pt-28 pb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-2xl"
-          >
+          <div className="max-w-2xl animate-hero-in">
             <div className="inline-flex items-center gap-3 mb-5">
               <span className="h-px w-8 bg-[#D4AF6E]/70" />
               <p className="text-xs tracking-[0.3em] uppercase text-[#D4AF6E]">
@@ -83,7 +78,7 @@ export function HomePage() {
                 <span>{ctaSecondary}</span>
               </button>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 

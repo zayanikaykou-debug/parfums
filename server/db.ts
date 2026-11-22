@@ -9,7 +9,12 @@ if (!fs.existsSync(dataDir)) {
 }
 
 export const db = new Database(path.join(dataDir, 'zephor.db'));
-db.pragma('journal_mode = WAL');
+try {
+  db.pragma('wal_checkpoint(TRUNCATE)');
+} catch {
+  // ignore if not in WAL mode
+}
+db.pragma('journal_mode = DELETE');
 db.pragma('foreign_keys = ON');
 
 export function initDatabase(): void {
@@ -467,9 +472,84 @@ function seedInitialData(): void {
     }
   }
 
-  // 5. Seed Realistic Historical Orders (only when empty) so analytics work immediately
-  const orderCount = (db.prepare('SELECT COUNT(*) as c FROM orders').get() as { c: number }).c;
-  if (orderCount === 0) {
+  // 5. Ensure Realistic Arabic/Tunisian Example Orders exist (fresh DB, hosted DB, or legacy migration)
+  const legacySample = db
+    .prepare("SELECT id FROM orders WHERE order_number = 'ZPH-2026-1001' AND customer_name = 'Yasmine Ben Salem'")
+    .get() as { id: number } | undefined;
+
+  if (legacySample) {
+    const arabicUpdates = [
+      {
+        num: 'ZPH-2026-1001',
+        oldPhone: '+216 54 210 881',
+        name: 'نور الهدى بن سالم',
+        city: 'المرسى، تونس',
+        address: '14 نهج الياسمين، حي الرياض، المرسى',
+        note: 'تغليف هدية فاخر من فضلكم',
+      },
+      {
+        num: 'ZPH-2026-1002',
+        oldPhone: '+216 22 781 304',
+        name: 'أحمد الطرابلسي',
+        city: 'حمام سوسة، سوسة',
+        address: 'شارع الهادي شاكر، إقامة النخيل، حمام سوسة',
+        note: '',
+      },
+      {
+        num: 'ZPH-2026-1003',
+        oldPhone: '+216 98 441 092',
+        name: 'مريم الغربي',
+        city: 'بنزرت الشمالية، بنزرت',
+        address: '7 شارع الحبيب بورقيبة، الكورنيش، بنزرت',
+        note: 'الاتصال قبل التوصيل بنصف ساعة',
+      },
+      {
+        num: 'ZPH-2026-1004',
+        oldPhone: '+216 55 119 640',
+        name: 'ياسين المنصوري',
+        city: 'صفاقس المدينة، صفاقس',
+        address: 'طريق تونس كلم 3، حي الحبيب، صفاقس',
+        note: '',
+      },
+      {
+        num: 'ZPH-2026-1005',
+        oldPhone: '+216 29 880 112',
+        name: 'آمنة الخليفي',
+        city: 'باجة الشمالية، باجة',
+        address: '22 نهج الاستقلال، وسط المدينة، باجة',
+        note: 'توصيل في الفترة الصباحية',
+      },
+      {
+        num: 'ZPH-2026-1006',
+        oldPhone: '+216 50 314 770',
+        name: 'سيف الدين البوعزيزي',
+        city: 'الحمامات، نابل',
+        address: 'إقامة الزيتونة، الحمامات الشمالية، نابل',
+        note: 'التوصيل بعد الساعة 17:00',
+      },
+    ];
+    for (const u of arabicUpdates) {
+      db.prepare(
+        'UPDATE orders SET customer_name = ?, city = ?, address = ?, note = ?, email = ? WHERE order_number = ?'
+      ).run(u.name, u.city, u.address, u.note, '', u.num);
+      db.prepare(
+        'UPDATE customers SET full_name = ?, city = ?, address = ?, email = ? WHERE phone = ?'
+      ).run(u.name, u.city, u.address, '', u.oldPhone);
+    }
+  }
+
+  const hasSampleOrders = (
+    db
+      .prepare(
+        `SELECT COUNT(*) as c FROM orders WHERE order_number IN (
+          'ZPH-2026-1001', 'ZPH-2026-1002', 'ZPH-2026-1003',
+          'ZPH-2026-1004', 'ZPH-2026-1005', 'ZPH-2026-1006', 'ZPH-2026-1007'
+        )`
+      )
+      .get() as { c: number }
+  ).c;
+
+  if (hasSampleOrders === 0) {
     const insertCust = db.prepare(
       'INSERT INTO customers (full_name, phone, email, city, address, created_at) VALUES (?, ?, ?, ?, ?, ?)'
     );
@@ -484,6 +564,32 @@ function seedInitialData(): void {
         order_id, product_id, variant_id, product_name, volume, unit_price_tnd, quantity, image_url
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
+
+    const resolveProductRef = (slug: string, volume: string) => {
+      const prod = db
+        .prepare('SELECT id, name, images_json FROM products WHERE slug = ? LIMIT 1')
+        .get(slug) as { id: number; name: string; images_json: string } | undefined;
+      const fallbackProd =
+        prod ||
+        (db
+          .prepare('SELECT id, name, images_json FROM products ORDER BY id ASC LIMIT 1')
+          .get() as { id: number; name: string; images_json: string } | undefined);
+      if (!fallbackProd) {
+        return { prodId: 1, varId: 1 };
+      }
+      const variant = db
+        .prepare('SELECT id FROM product_variants WHERE product_id = ? AND volume = ? LIMIT 1')
+        .get(fallbackProd.id, volume) as { id: number } | undefined;
+      const fallbackVariant =
+        variant ||
+        (db
+          .prepare('SELECT id FROM product_variants WHERE product_id = ? ORDER BY id ASC LIMIT 1')
+          .get(fallbackProd.id) as { id: number } | undefined);
+      return {
+        prodId: fallbackProd.id,
+        varId: fallbackVariant ? fallbackVariant.id : 1,
+      };
+    };
 
     const daysAgoIso = (days: number, hour = 14) => {
       const d = new Date();
@@ -503,7 +609,7 @@ function seedInitialData(): void {
         note: 'تغليف هدية فاخر من فضلكم',
         status: 'Delivered',
         created_at: daysAgoIso(12, 11),
-        items: [{ prodId: 3, varId: 6, name: 'Aura Éclatante', vol: '50 ml', price: 245, qty: 1, img: '/src/assets/images/cat_parfums_femme_1795349868031.jpg' }],
+        items: [{ slug: 'aura-eclatante', name: 'Aura Éclatante', vol: '50 ml', price: 245, qty: 1, img: '/src/assets/images/cat_parfums_femme_1795349868031.jpg' }],
       },
       {
         num: 'ZPH-2026-1002',
@@ -515,7 +621,7 @@ function seedInitialData(): void {
         note: '',
         status: 'Delivered',
         created_at: daysAgoIso(8, 16),
-        items: [{ prodId: 1, varId: 2, name: 'Nocturne Absolu', vol: '100 ml', price: 460, qty: 1, img: '/src/assets/images/hero_zephor_campaign_1795349867029.jpg' }],
+        items: [{ slug: 'nocturne-absolu', name: 'Nocturne Absolu', vol: '100 ml', price: 460, qty: 1, img: '/src/assets/images/hero_zephor_campaign_1795349867029.jpg' }],
       },
       {
         num: 'ZPH-2026-1003',
@@ -527,7 +633,7 @@ function seedInitialData(): void {
         note: 'الاتصال قبل التوصيل بنصف ساعة',
         status: 'Delivered',
         created_at: daysAgoIso(4, 15),
-        items: [{ prodId: 9, varId: 17, name: 'Coffret Prestige Nocturne', vol: 'Coffret 3 Pièces', price: 440, qty: 1, img: '/src/assets/images/cat_coffrets_cadeaux_1795349866518.jpg' }],
+        items: [{ slug: 'coffret-prestige-nocturne', name: 'Coffret Prestige Nocturne', vol: 'Coffret 3 Pièces', price: 440, qty: 1, img: '/src/assets/images/cat_coffrets_cadeaux_1795349866518.jpg' }],
       },
       {
         num: 'ZPH-2026-1004',
@@ -539,7 +645,7 @@ function seedInitialData(): void {
         note: '',
         status: 'Shipped',
         created_at: daysAgoIso(2, 10),
-        items: [{ prodId: 2, varId: 4, name: 'Cèdre Souverain', vol: '100 ml', price: 279, qty: 1, img: '/src/assets/images/cat_parfums_homme_1795349867456.jpg' }],
+        items: [{ slug: 'cedre-souverain', name: 'Cèdre Souverain', vol: '100 ml', price: 279, qty: 1, img: '/src/assets/images/cat_parfums_homme_1795349867456.jpg' }],
       },
       {
         num: 'ZPH-2026-1005',
@@ -551,7 +657,7 @@ function seedInitialData(): void {
         note: 'توصيل في الفترة الصباحية',
         status: 'Preparing',
         created_at: daysAgoIso(1, 17),
-        items: [{ prodId: 4, varId: 8, name: 'Safran Obscur', vol: '50 ml', price: 265, qty: 2, img: '/src/assets/images/cat_parfums_unisexe_1795349866882.jpg' }],
+        items: [{ slug: 'saffran-obscur', name: 'Safran Obscur', vol: '50 ml', price: 265, qty: 2, img: '/src/assets/images/cat_parfums_unisexe_1795349866882.jpg' }],
       },
       {
         num: 'ZPH-2026-1006',
@@ -563,7 +669,7 @@ function seedInitialData(): void {
         note: 'التوصيل بعد الساعة 17:00',
         status: 'Confirmed',
         created_at: daysAgoIso(0, 9),
-        items: [{ prodId: 5, varId: 10, name: 'Ambre Orion', vol: '75 ml', price: 255, qty: 1, img: '/src/assets/images/prod_ambre_nocturne_1795349866233.jpg' }],
+        items: [{ slug: 'ambre-orion', name: 'Ambre Orion', vol: '75 ml', price: 255, qty: 1, img: '/src/assets/images/prod_ambre_nocturne_1795349866233.jpg' }],
       },
       {
         num: 'ZPH-2026-1007',
@@ -575,7 +681,7 @@ function seedInitialData(): void {
         note: 'كتابة بطاقة إهداء باسم سلمى',
         status: 'Pending',
         created_at: daysAgoIso(0, 13),
-        items: [{ prodId: 8, varId: 16, name: 'Extrait Maison Noir', vol: '100 ml', price: 540, qty: 1, img: '/src/assets/images/cat_collections_exclusives_1795349868031.jpg' }],
+        items: [{ slug: 'extrait-maison-noir', name: 'Extrait Maison Noir', vol: '100 ml', price: 540, qty: 1, img: '/src/assets/images/cat_collections_exclusives_1795349868031.jpg' }],
       },
     ];
 
@@ -602,129 +708,8 @@ function seedInitialData(): void {
       );
       const orderId = Number(ordRes.lastInsertRowid);
       for (const it of o.items) {
-        insertItem.run(orderId, it.prodId, it.varId, it.name, it.vol, it.price, it.qty, it.img);
-      }
-    }
-  } else {
-    // One-time update if initial French sample orders exist so the live admin showcases Arabic names & Tunisian addresses
-    const legacySample = db
-      .prepare("SELECT id FROM orders WHERE order_number = 'ZPH-2026-1001' AND customer_name = 'Yasmine Ben Salem'")
-      .get() as { id: number } | undefined;
-
-    if (legacySample) {
-      const arabicUpdates = [
-        {
-          num: 'ZPH-2026-1001',
-          oldPhone: '+216 54 210 881',
-          name: 'نور الهدى بن سالم',
-          city: 'المرسى، تونس',
-          address: '14 نهج الياسمين، حي الرياض، المرسى',
-          note: 'تغليف هدية فاخر من فضلكم',
-        },
-        {
-          num: 'ZPH-2026-1002',
-          oldPhone: '+216 22 781 304',
-          name: 'أحمد الطرابلسي',
-          city: 'حمام سوسة، سوسة',
-          address: 'شارع الهادي شاكر، إقامة النخيل، حمام سوسة',
-          note: '',
-        },
-        {
-          num: 'ZPH-2026-1003',
-          oldPhone: '+216 98 441 092',
-          name: 'مريم الغربي',
-          city: 'بنزرت الشمالية، بنزرت',
-          address: '7 شارع الحبيب بورقيبة، الكورنيش، بنزرت',
-          note: 'الاتصال قبل التوصيل بنصف ساعة',
-        },
-        {
-          num: 'ZPH-2026-1004',
-          oldPhone: '+216 55 119 640',
-          name: 'ياسين المنصوري',
-          city: 'صفاقس المدينة، صفاقس',
-          address: 'طريق تونس كلم 3، حي الحبيب، صفاقس',
-          note: '',
-        },
-        {
-          num: 'ZPH-2026-1005',
-          oldPhone: '+216 29 880 112',
-          name: 'آمنة الخليفي',
-          city: 'باجة الشمالية، باجة',
-          address: '22 نهج الاستقلال، وسط المدينة، باجة',
-          note: 'توصيل في الفترة الصباحية',
-        },
-        {
-          num: 'ZPH-2026-1006',
-          oldPhone: '+216 50 314 770',
-          name: 'سيف الدين البوعزيزي',
-          city: 'الحمامات، نابل',
-          address: 'إقامة الزيتونة، الحمامات الشمالية، نابل',
-          note: 'التوصيل بعد الساعة 17:00',
-        },
-      ];
-      for (const u of arabicUpdates) {
-        db.prepare(
-          'UPDATE orders SET customer_name = ?, city = ?, address = ?, note = ?, email = ? WHERE order_number = ?'
-        ).run(u.name, u.city, u.address, u.note, '', u.num);
-        db.prepare(
-          'UPDATE customers SET full_name = ?, city = ?, address = ?, email = ? WHERE phone = ?'
-        ).run(u.name, u.city, u.address, '', u.oldPhone);
-      }
-
-      const seventhExists = db
-        .prepare("SELECT id FROM orders WHERE order_number = 'ZPH-2026-1007'")
-        .get() as { id: number } | undefined;
-      if (!seventhExists) {
-        const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
-        const custRes = db
-          .prepare('INSERT INTO customers (full_name, phone, email, city, address, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-          .run('فاطمة الزهراء العياري', '+216 24 609 518', '', 'النصر، أريانة', 'شارع الهادي نويرة، النصر 2، أريانة', nowStr);
-        const custId = Number(custRes.lastInsertRowid);
-        const ordRes = db
-          .prepare(
-            `INSERT INTO orders (
-              order_number, customer_id, customer_name, phone, email, city, address,
-              note, payment_method, subtotal_tnd, shipping_tnd, total_tnd, status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Paiement à la livraison', ?, ?, ?, ?, ?)`
-          )
-          .run(
-            'ZPH-2026-1007',
-            custId,
-            'فاطمة الزهراء العياري',
-            '+216 24 609 518',
-            '',
-            'النصر، أريانة',
-            'شارع الهادي نويرة، النصر 2، أريانة',
-            'كتابة بطاقة إهداء باسم سلمى',
-            540,
-            0,
-            540,
-            'Pending',
-            nowStr
-          );
-        const orderId = Number(ordRes.lastInsertRowid);
-        const prod = db
-          .prepare("SELECT id, name, images_json FROM products WHERE name = 'Extrait Maison Noir' LIMIT 1")
-          .get() as { id: number; name: string; images_json: string } | undefined;
-        const variant = prod
-          ? (db
-              .prepare('SELECT id, volume FROM product_variants WHERE product_id = ? ORDER BY price_tnd DESC LIMIT 1')
-              .get(prod.id) as { id: number; volume: string } | undefined)
-          : undefined;
-        db.prepare(
-          `INSERT INTO order_items (
-            order_id, product_id, variant_id, product_name, volume, unit_price_tnd, quantity, image_url
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-        ).run(
-          orderId,
-          prod ? prod.id : null,
-          variant ? variant.id : null,
-          prod ? prod.name : 'Extrait Maison Noir',
-          variant ? variant.volume : '100 ml',
-          540,
-          1,
-          '/src/assets/images/cat_collections_exclusives_1795349868031.jpg'
-        );
+        const ref = resolveProductRef(it.slug, it.vol);
+        insertItem.run(orderId, ref.prodId, ref.varId, it.name, it.vol, it.price, it.qty, it.img);
       }
     }
   }

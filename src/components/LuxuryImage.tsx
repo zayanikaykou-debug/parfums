@@ -6,9 +6,16 @@ interface LuxuryImageProps {
   alt: string;
   className?: string;
   fallbackTitle?: string;
+  priority?: boolean;
 }
 
-export function LuxuryImage({ src, alt, className = '', fallbackTitle }: LuxuryImageProps) {
+export function LuxuryImage({
+  src,
+  alt,
+  className = '',
+  fallbackTitle,
+  priority = false,
+}: LuxuryImageProps) {
   const [failed, setFailed] = useState(false);
 
   if (!src || failed) {
@@ -30,6 +37,9 @@ export function LuxuryImage({ src, alt, className = '', fallbackTitle }: LuxuryI
     <img
       src={src}
       alt={alt}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
+      fetchPriority={priority ? 'high' : 'auto'}
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
       className={className}

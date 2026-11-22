@@ -1,6 +1,7 @@
 import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import multer from 'multer';
 import { db, initDatabase } from './server/db.ts';
 import {
@@ -21,12 +22,31 @@ app.set('trust proxy', 1);
 
 const PORT = Number(process.env.PORT || 3000);
 
-// Security Headers Middleware
-app.use((_req, res, next) => {
+// Security Headers & Gzip Compression Middleware
+app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  const acceptEncoding = String(req.headers['accept-encoding'] || '');
+  if (!acceptEncoding.includes('gzip') || req.path.startsWith('/uploads')) {
+    next();
+    return;
+  }
+
+  const origJson = res.json.bind(res);
+  res.json = ((body: unknown) => {
+    const raw = JSON.stringify(body);
+    if (raw.length < 1024) {
+      return origJson(body);
+    }
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Encoding', 'gzip');
+    res.setHeader('Vary', 'Accept-Encoding');
+    return res.send(zlib.gzipSync(raw));
+  }) as typeof res.json;
+
   next();
 });
 
@@ -86,7 +106,7 @@ const upload = multer({
 });
 
 app.use(express.json({ limit: '2mb' }));
-app.use('/uploads', express.static(uploadsDir, { dotfiles: 'deny' }));
+app.use('/uploads', express.static(uploadsDir, { dotfiles: 'deny', maxAge: '7d' }));
 
 // Helpers to assemble products with variants and category names
 interface RawProductRow {
@@ -1156,7 +1176,7 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distDir = path.resolve(process.cwd(), 'dist');
-    app.use(express.static(distDir));
+    app.use(express.static(distDir, { maxAge: '7d', etag: true, index: false }));
     app.get('*', (_req, res) => {
       res.sendFile(path.join(distDir, 'index.html'));
     });
