@@ -1,0 +1,6 @@
+{
+  "name": "Zephor Parfums",
+  "description": "Maison de Haute Parfumerie — Fragrances de luxe pour homme et femme, créations exclusives et coffrets d'exception.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

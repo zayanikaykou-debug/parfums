@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", "Amiri", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Cairo", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-midnight: #060B17;
+  --color-navy-deep: #0B1325;
+  --color-navy-surface: #101A33;
+  --color-champagne: #D4AF6E;
+  --color-champagne-light: #E8CFA0;
+  --color-ivory: #F7F4EE;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: #060B17;
+    color: #F7F4EE;
+    font-family: var(--font-sans);
+  }
+
+  html[dir="rtl"] {
+    font-family: "Cairo", "Plus Jakarta Sans", system-ui, sans-serif;
+  }
+
+  html[dir="rtl"] .font-serif {
+    font-family: "Amiri", "Cormorant Garamond", Georgia, serif;
+  }
+
+  body {
+    overflow-x: hidden;
+    background-color: #060B17;
+    background-image:
+      radial-gradient(ellipse 80% 45% at 50% -10%, rgba(212, 175, 110, 0.08), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 85% 35%, rgba(24, 42, 86, 0.25), transparent 75%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Signature Haute-Parfumerie Liquid Glass (never forces position: relative over Tailwind utilities) */
+  .liquid-glass {
+    background: linear-gradient(
+      145deg,
+      rgba(22, 34, 66, 0.72) 0%,
+      rgba(10, 17, 36, 0.84) 55%,
+      rgba(6, 11, 23, 0.92) 100%
+    );
+    backdrop-filter: blur(26px) saturate(165%);
+    -webkit-backdrop-filter: blur(26px) saturate(165%);
+    border: 1px solid rgba(212, 175, 110, 0.22);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 0 rgba(212, 175, 110, 0.08),
+      0 24px 60px -24px rgba(0, 0, 0, 0.85),
+      0 0 40px -18px rgba(212, 175, 110, 0.14);
+  }
+
+  .liquid-glass-subtle {
+    background: linear-gradient(
+      135deg,
+      rgba(16, 26, 51, 0.62) 0%,
+      rgba(8, 14, 29, 0.76) 100%
+    );
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    border: 1px solid rgba(212, 175, 110, 0.18);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.09),
+      0 14px 36px -18px rgba(0, 0, 0, 0.7);
+  }
+
+  .liquid-glass-card {
+    background: linear-gradient(
+      155deg,
+      rgba(19, 30, 58, 0.68) 0%,
+      rgba(9, 15, 31, 0.88) 100%
+    );
+    backdrop-filter: blur(18px) saturate(145%);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    border: 1px solid rgba(212, 175, 110, 0.16);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+      0 20px 45px -24px rgba(0, 0, 0, 0.8);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  .liquid-glass-card:hover {
+    border-color: rgba(212, 175, 110, 0.42);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
+      0 28px 60px -22px rgba(0, 0, 0, 0.9),
+      0 0 36px -12px rgba(212, 175, 110, 0.2);
+  }
+
+  /* Specular champagne gold CTA with subtle light sheen */
+  .btn-gold-luxury {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #E8CFA0 0%, #D4AF6E 50%, #BE944E 100%);
+    color: #060B17;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.45),
+      0 12px 30px -10px rgba(212, 175, 110, 0.45);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, filter 0.25s ease;
+  }
+
+  .btn-gold-luxury::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.38) 50%,
+      transparent 80%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+
+  .btn-gold-luxury:hover::after {
+    transform: translateX(120%);
+  }
+
+  .btn-gold-luxury:hover {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.55),
+      0 16px 36px -10px rgba(212, 175, 110, 0.6);
+  }
+
+  .gold-ornament-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .gold-ornament-divider::before,
+  .gold-ornament-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212, 175, 110, 0.32), transparent);
+  }
+}
+
+.gold-hairline {
+  border-color: rgba(212, 175, 110, 0.18);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom subtle scrollbars for midnight navy luxury aesthetic */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #060B17;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 110, 0.25);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 110, 0.45);
+}
